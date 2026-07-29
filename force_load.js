@@ -33,10 +33,31 @@ async function forceLoadMod(url, opts) {
     }
     const code = await res.text();
 
+    // Snapshot element ids before running the mod so we can tell
+    // what it added, and auto-finalize those. This matters because
+    // the base game only runs its element-finalize pass once, on
+    // window.onload -- any element a mod adds AFTER that (which is
+    // always true here, since you're pasting this into an
+    // already-loaded game) never gets a real .tick/.id/.movable and
+    // just floats with no gravity unless something finalizes it.
+    const before = new Set(Object.keys(elements));
+
     const script = document.createElement("script");
     script.textContent = code; // inline, not src -- no MIME/nosniff check applies
     document.head.appendChild(script);
     console.log("forceLoadMod: executed " + code.length + " chars from " + url);
+
+    let finalized = 0;
+    for (const id in elements) {
+        if (before.has(id)) continue;
+        if (typeof finalizeColor === "function") finalizeColor(elements[id]);
+        if (typeof checkAutoGen === "function") checkAutoGen(id, elements[id]);
+        if (typeof finalizeElementAfter === "function") finalizeElementAfter(id);
+        finalized++;
+    }
+    if (finalized > 0) {
+        console.log("forceLoadMod: auto-finalized " + finalized + " new element(s) so they get gravity/physics.");
+    }
 
     if (opts.persist) {
         const name = url.split("/").pop();

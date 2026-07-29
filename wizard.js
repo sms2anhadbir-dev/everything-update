@@ -5,13 +5,28 @@ if (typeof elements === "undefined") {
     throw new Error("Sandboxels elements object not found!");
 }
 
+// -----------------------------------------------------------
+// Finalizes newly-added elements the same way the base game does
+// on window.onload. Needed because mods loaded mid-session (e.g.
+// via forceLoadMod) run AFTER that one-time finalize pass, so
+// without this, new elements never get a real .tick/.id/.movable
+// and end up floating with no gravity.
+// -----------------------------------------------------------
+function euFinalize(ids) {
+    ids.forEach(function (id) {
+        if (typeof finalizeColor === "function") finalizeColor(elements[id]);
+        if (typeof checkAutoGen === "function") checkAutoGen(id, elements[id]);
+        if (typeof finalizeElementAfter === "function") finalizeElementAfter(id);
+    });
+}
+
 // =====================
 // MAGIC ELEMENTS
 // =====================
 
 elements.mana_crystal = {
     color: ["#66ccff", "#99ddff", "#ccffff"],
-    behavior: "wall",
+    behavior: behaviors.WALL,
     category: "magic",
     state: "solid",
     density: 2500,
@@ -19,7 +34,7 @@ elements.mana_crystal = {
 
 elements.mana = {
     color: "#66aaff",
-    behavior: "gas",
+    behavior: behaviors.GAS,
     category: "magic",
     state: "gas",
     density: 1,
@@ -31,7 +46,7 @@ elements.mana = {
 
 elements.fire_bolt = {
     color: "#ff5500",
-    behavior: "powder",
+    behavior: behaviors.POWDER,
     category: "magic",
     state: "solid",
     temp: 600,
@@ -39,7 +54,7 @@ elements.fire_bolt = {
 
 elements.ice_shard = {
     color: "#99ddff",
-    behavior: "powder",
+    behavior: behaviors.POWDER,
     category: "magic",
     state: "solid",
     temp: -50,
@@ -47,7 +62,7 @@ elements.ice_shard = {
 
 elements.lightning_bolt = {
     color: "#ffff66",
-    behavior: "powder",
+    behavior: behaviors.POWDER,
     category: "magic",
     state: "solid",
     temp: 1000,
@@ -55,14 +70,14 @@ elements.lightning_bolt = {
 
 elements.shadow_orb = {
     color: "#222222",
-    behavior: "powder",
+    behavior: behaviors.POWDER,
     category: "magic",
     state: "solid",
 };
 
 elements.healing_light = {
     color: "#ffffcc",
-    behavior: "gas",
+    behavior: behaviors.GAS,
     category: "magic",
     state: "gas",
 };
@@ -70,6 +85,10 @@ elements.healing_light = {
 // =====================
 // WIZARD CORE SYSTEM
 // =====================
+// Wizards use a custom tick (movement + spellcasting) instead of a
+// stock behavior matrix, so no `behavior` key is set for them --
+// that's intentional, not a bug. They still need euFinalize() below
+// so the engine assigns them a real id and marks them movable.
 
 function wizardTick(pixel) {
 
@@ -89,7 +108,10 @@ function wizardTick(pixel) {
         }
     }
 
-    // RANDOM MOVEMENT
+    // GRAVITY (wizards are living creatures, not floating orbs)
+    tryMove(pixel, pixel.x, pixel.y + 1);
+
+    // RANDOM SIDEWAYS MOVEMENT
     if (Math.random() < 0.1) {
         tryMove(
             pixel,
@@ -132,7 +154,13 @@ elements.light_wizard = makeWizard("#ffffcc", "healing_light");
 elements.nature_wizard = makeWizard("#22aa22", "mana");
 
 // =====================
-// LOADED MESSAGE
+// FINALIZE + LOADED MESSAGE
 // =====================
+
+euFinalize([
+    "mana_crystal", "mana",
+    "fire_bolt", "ice_shard", "lightning_bolt", "shadow_orb", "healing_light",
+    "fire_wizard", "ice_wizard", "storm_wizard", "dark_wizard", "light_wizard", "nature_wizard"
+]);
 
 console.log("Everything Update: Wizard System Loaded (FINAL)");

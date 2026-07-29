@@ -14,12 +14,23 @@ if (typeof elements.mana === "undefined") {
     console.warn("extras.js: wizard.js not loaded first, some reactions won't register.");
 }
 
+// Same finalize helper as wizard.js -- see that file for why it's
+// needed (mods injected mid-session miss the base game's one-time
+// window.onload finalize pass, so new elements never get gravity).
+function euFinalize(ids) {
+    ids.forEach(function (id) {
+        if (typeof finalizeColor === "function") finalizeColor(elements[id]);
+        if (typeof checkAutoGen === "function") checkAutoGen(id, elements[id]);
+        if (typeof finalizeElementAfter === "function") finalizeElementAfter(id);
+    });
+}
+
 // =====================
 // MANA GENERATOR
 // =====================
 elements.mana_generator = {
     color: "#4488ff",
-    behavior: "wall",
+    behavior: behaviors.WALL,
     category: "magic",
     state: "solid",
     density: 4000,
@@ -41,7 +52,7 @@ elements.mana_generator = {
 // =====================
 elements.potion_bottle = {
     color: "#88ffaa",
-    behavior: "powder",
+    behavior: behaviors.POWDER,
     category: "magic",
     state: "solid",
     tags: ["fragile"],
@@ -50,7 +61,7 @@ elements.potion_bottle = {
 
 elements.strength_potion = {
     color: "#ff8844",
-    behavior: "liquid",
+    behavior: behaviors.LIQUID,
     category: "magic",
     state: "liquid",
     density: 900,
@@ -84,5 +95,7 @@ elements.familiar = {
     density: 700,
     tick: familiarTick,
 };
+
+euFinalize(["mana_generator", "potion_bottle", "strength_potion", "familiar"]);
 
 console.log("Everything Update: Extras Pack Loaded (mana generator, potions, familiar)");
