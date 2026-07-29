@@ -75,25 +75,32 @@ elements.shadow_orb = {
     state: "solid",
 };
 
-// healing_light is a beam, not a gas cloud -- it needs to travel in
-// a straight line like Sandboxels' own "laser" element does. Plain
-// behaviors.GAS just diffuses randomly in every direction, which is
-// why it never looked like a ray. Instead it uses a custom tick that
-// keeps moving in whatever direction it was cast (stamped onto the
-// pixel by wizardTick below as .dx/.dy) and fades out after a short
-// travel distance or as soon as it's blocked.
+// healing_light is meant to be an instant downward ray, the same way
+// Sandboxels' own "god_ray" element works: on the single tick it
+// exists, it scans straight down from its own position to the bottom
+// of the map, applies an effect to whatever it passes over (here,
+// bless's own cure/heal logic), then deletes itself immediately.
+// That's a completely different mechanism from a slow-moving
+// particle -- it's a one-frame beam, not something that crawls one
+// tile per tick.
 elements.healing_light = {
-    color: "#ffffcc",
+    color: ["#ffffcc", "#fff2a8"],
     category: "magic",
     state: "gas",
-    density: 0.05,
+    density: 1,
+    excludeRandom: true,
+    noMix: true,
     tick: function (pixel) {
-        var dx = pixel.dx || 0;
-        var dy = pixel.dy !== undefined ? pixel.dy : -1; // default: drifts upward like a light ray
-        pixel.rayLife = (pixel.rayLife || 0) + 1;
-        if (pixel.rayLife > 40 || !tryMove(pixel, pixel.x + dx, pixel.y + dy)) {
-            deletePixel(pixel.x, pixel.y);
+        var x = pixel.x;
+        for (var y = pixel.y + 1; y < height + 1; y++) {
+            if (outOfBounds(x, y)) break;
+            if (isEmpty(x, y)) continue;
+            if (elements[pixelMap[x][y].element].id === elements.healing_light.id) break;
+            if (typeof elements.bless !== "undefined" && elements.bless.tool) {
+                elements.bless.tool(pixelMap[x][y]);
+            }
         }
+        deletePixel(pixel.x, pixel.y);
     },
 };
 
@@ -120,14 +127,6 @@ function wizardTick(pixel) {
 
         if (isEmpty(nx, ny)) {
             createPixel(pixel.spell, nx, ny);
-            // stamp the cast direction onto the new pixel so directional
-            // spells (currently just healing_light) travel outward like
-            // a beam instead of sitting still or diffusing randomly
-            var spawned = currentPixels[currentPixels.length - 1];
-            if (spawned) {
-                spawned.dx = dir[0];
-                spawned.dy = dir[1];
-            }
         }
     }
 
