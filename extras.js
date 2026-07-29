@@ -50,12 +50,19 @@ elements.mana_generator = {
 // =====================
 // POTIONS
 // =====================
+// Real solids in Sandboxels (wood, ice, glass) use behaviors.WALL --
+// completely static, doesn't crumble/pile. behaviors.POWDER is loose
+// granular material (same as sand/snow), which is why this used to
+// fall apart like a pile instead of sitting as a solid bottle.
+// Also: `tags: ["fragile"]` used to be here but Sandboxels has no
+// such tag -- it was dead weight that never did anything.
+// `breakInto` IS a real mechanic though (triggered by explosions,
+// the smash tool, etc. via the engine's breakPixel()), so it's kept.
 elements.potion_bottle = {
     color: "#88ffaa",
-    behavior: behaviors.POWDER,
+    behavior: behaviors.WALL,
     category: "magic",
     state: "solid",
-    tags: ["fragile"],
     breakInto: "healing_light",
 };
 
